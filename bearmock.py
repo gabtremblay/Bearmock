@@ -1,7 +1,13 @@
 # Uniden Bearcat serial emulator
-# Use it on windows with com0com
+#
+# Mocks a BCD296D
+# Tested with 3.15 and 3.60 update (should be enough ;))
+#
+# Use it on windows with com0com (Virtual port class COMX->COMY) Default opts
+#
 # -- Gabriel Tremblay initnull hat gmail dot com
 #################################################
+
 
 from time import sleep
 
@@ -11,33 +17,39 @@ from serial import Serial
 from serial.serialutil import SerialException, portNotOpenError
 
 __MODEL = 'BCD296D'
-__PORT = 'COM12'
-__SPEED = 57600
-__TIMEOUT = 0 # non-blocking, return on read
+__PORT = 'COM11'
+__SPEED = 115200 # don't touch this, com0com will adapt.
+__TIMEOUT = 0  # non-blocking, return on read
 __READ_SLEEP_SECS = 0
 __OUT = 'decoded.s19'
 
+
 __ACTIONS = {
-    '\r' : 'OK\r', # Empty, just reply
-    '*SUM\r' : '10000\r',
-    '*SPD 4\r' : 'SPEED ' + str(__SPEED) +  ' bps\r',
-    '*SPD 5\r' : 'SPEED ' + str(__SPEED) +  ' bps\r',
-    '*PGL 11000000000\r' : 'OK\r',
-    '*PGL 1000000000000000000\r' : 'OK\r',
-    '*ULE\r' : 'OK\r',
-    '*PRG\r' : 'OK\r',
-    '*MDL\r' : __MODEL + '\r',
-    '*FDP\r' : 'FDP 3.\r',
-    '*REG\r' : 'OK\r',
-    '*SCB 1\r' : 'SCB 1\r',
-    '*APP\r' : 'OK\r',
+    '\r': 'UNKNOWN COMMAND\r',  # Empty, just reply
+    '*SUM\r': 'CHECKSUM= DEADH\r',  # Fake _outdated_ checksum
+    '*SPD 1\r': 'SPEED 9600 bps\r',
+    '*SPD 2\r': 'SPEED 19200 bps\r',
+    '*SPD 3\r': 'SPEED 38400 bps\r',
+    '*SPD 4\r': 'SPEED 57600 bps\r',
+    '*SPD 5\r': 'SPEED 115200 bps\r',
+    '*PGL 11000000000\r': 'OK\r',
+    '*PGL 1000000000000000000\r': 'OK\r',
+    '*ULE\r': 'OK\r',
+    '*PRG\r': 'OK\r',
+    '*MDL\r': __MODEL + '\r',
+    '*FDP\r': 'FDP 3.\r',
+    '*REG\r': 'OK\rOK\r',
+    '*SCB 1\r': 'SCB 1\r',
+    '*APP\r': 'OK\r',
+    '*RTS F\r': 'RTS OFF\r',
+    '*MOD 1\r': 'MODE 1\r',
 }
 
 
 # Main loop
 if __name__ == "__main__":
     try:
-        port = Serial(__PORT, __SPEED, timeout=__TIMEOUT)
+        port = Serial(__PORT, __SPEED, timeout=__TIMEOUT, bytesize=8, parity='N', stopbits=1)
     except SerialException:
         print "Error: Port already in use."
         exit()
@@ -51,21 +63,21 @@ if __name__ == "__main__":
             byte = port.read()
             if len(byte) > 0:
                 num = int(byte.encode('hex'), 16)
+                #print str(num) + ' (' + chr(num) + ')'
                 readbuf = ''.join([readbuf, chr(num)])
-                if num == 13:
+                if num == 13:  # got a \r == end of line
                     if readbuf[0:2] == 'S8':
+                        print "End of firmware (updater will crash ;)"
                         readbuf = readbuf.replace('\x0d', '\x0d\x0a')
                         outfile.write(readbuf)
                         outfile.close()
-                        print "Done"
                         exit()
                     elif readbuf[0:2] == 'S0' or readbuf[0:2] == 'S2':
                         readbuf = readbuf.replace('\x0d', '\x0d\x0a')
                         outfile.write(readbuf)
-                        port.write('\r')
                     else:
                         print "Received command: ",
-                        print readbuf.strip(' ')
+                        print readbuf
 
                         # execute action based on query
                         action = __ACTIONS.get(readbuf.strip(''))
@@ -74,9 +86,9 @@ if __name__ == "__main__":
                         else:
                             print "Sending: " + action + "\n"
                             port.write(__ACTIONS.get(readbuf.strip(' ')))
-
                     port.flush()
                     readbuf = ''
+
         except portNotOpenError:
             print "Error: Port was closed"
             exit()
