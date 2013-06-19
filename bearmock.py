@@ -5,7 +5,7 @@
 #
 # Use it on windows with com0com (Virtual port class COMX->COMY) Default opts
 #
-# -- Gabriel Tremblay initnull hat gmail dot com
+# -- Gabriel Tremblay gabriel hat subatomicsecurity dot com
 #################################################
 
 
