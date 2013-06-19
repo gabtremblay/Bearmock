@@ -1,6 +1,6 @@
 # Uniden Bearcat serial emulator
 #
-# Mocks a BCD296D
+# Mocks a BCD296D AND/OR a BCi96D card.
 # Tested with 3.15 and 3.60 update (should be enough ;))
 #
 # Use it on windows with com0com (Virtual port class COMX->COMY) Default opts
@@ -34,6 +34,7 @@ __ACTIONS = {
     '*SPD 5\r': 'SPEED 115200 bps\r',
     '*PGL 11000000000\r': 'OK\r',
     '*PGL 1000000000000000000\r': 'OK\r',
+    '*PGL 1100000\r': 'OK\r',
     '*ULE\r': 'OK\r',
     '*PRG\r': 'OK\r',
     '*MDL\r': __MODEL + '\r',
@@ -43,6 +44,8 @@ __ACTIONS = {
     '*APP\r': 'OK\r',
     '*RTS F\r': 'RTS OFF\r',
     '*MOD 1\r': 'MODE 1\r',
+    '*SUM 1 0\r': 'CHECKSUM= C68FH\r',
+    '*SUM 6 0\r': 'CHECKSUM= DEADH\r',
 }
 
 
